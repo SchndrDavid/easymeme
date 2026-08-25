@@ -108,11 +108,41 @@ same cut-out twice is therefore a no-op rather than a second copy. Uploads are
 capped at 4 MB each, and the library at 500 stickers or 200 MB, whichever comes
 first.
 
-`./data` must be writable by `EASYMEME_UID:EASYMEME_GID`. If it is not, the app
-still starts and the meme editor works normally — the sticker endpoints return
-`503` and the reason is printed to the container log.
+`./data/stickers` is committed to the repository (empty, via a `.gitkeep`) on
+purpose. Docker creates a missing bind-mount source directory as `root`, and this
+container runs unprivileged — so if the directory did not already exist, the app
+could not write into it. Shipping it means the checkout owns it and `docker
+compose up` works with no extra steps.
 
 Nothing else is written. There is no database.
+
+### "Sticker library unavailable"
+
+The meme editor still works; only the library is down, and it means `./data` is
+not writable by `EASYMEME_UID:EASYMEME_GID`. Ask the server what it thinks:
+
+```
+curl -s http://localhost:8104/api/health
+```
+
+A broken library reports the path and the underlying OS error:
+
+```json
+{"status": "ok", "service": "easymeme", "stickers": false,
+ "stickers_error": "[Errno 13] Permission denied: '/app/data/stickers'",
+ "stickers_path": "/app/data/stickers"}
+```
+
+The container log prints the same thing plus the command to run. Nearly always
+the fix is on the host, in the deployment directory:
+
+```
+mkdir -p data/stickers && chown -R 1000:1000 data
+```
+
+using whatever `EASYMEME_UID:EASYMEME_GID` is set to. **No restart is needed** —
+the app re-checks the directory on every request while it is failing, so the
+library comes back on the next page load.
 
 ## A word on exposure
 

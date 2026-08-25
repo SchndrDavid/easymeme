@@ -84,9 +84,12 @@ export async function refreshLibrary() {
   } catch (err) {
     items = [];
     render();
+    // A 503 means the server started but its data directory is not writable,
+    // which is nearly always a volume owned by the wrong user. Pass the server's
+    // own reason through - it names the path and the OS error.
     note.textContent =
       err.status === 503
-        ? "The library is unavailable - the server cannot write to its data directory."
+        ? "Sticker library unavailable. " + err.message
         : "Could not reach the library: " + err.message;
   }
 }

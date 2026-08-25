@@ -7,5 +7,8 @@ __pycache__/
 venv/
 .venv/
 
-# Runtime sticker library
-data/
+# Runtime sticker library. The directory itself is tracked (data/stickers/.gitkeep)
+# so the compose bind mount has an existing, checkout-owned target rather than one
+# Docker creates as root; only the stickers themselves are ignored.
+data/stickers/*
+!data/stickers/.gitkeep

@@ -40,27 +40,70 @@ READ_ONLY = os.getenv("EASYMEME_STICKERS_RO", "").strip().lower() in {"1", "true
 app = FastAPI(title="EasyMeme", docs_url=None, redoc_url=None)
 
 
-def _ensure_storage() -> bool:
-    """Creates the sticker directory. A failure is reported, never fatal: the
-    meme editor works perfectly well without a library, and a container whose
-    volume is misconfigured should still serve the app."""
+_storage_ok = False
+_storage_error = ""
+
+
+def _probe_storage() -> bool:
+    """Creates the sticker directory and confirms it can be written to.
+
+    Re-checked on every request while it is failing, rather than latched at
+    startup: the usual cause is a bind mount owned by the wrong user, and having
+    to remember to restart the container after fixing that on the host is a
+    needless second step. Once it succeeds the answer is cached.
+
+    A failure is reported, never fatal - the meme editor works perfectly well
+    without a library, and a container with a misconfigured volume should still
+    serve the app.
+    """
+    global _storage_ok, _storage_error
+    if _storage_ok:
+        return True
     try:
         STICKERS_DIR.mkdir(parents=True, exist_ok=True)
         probe = STICKERS_DIR / ".writable"
         probe.write_bytes(b"")
         probe.unlink()
-        return True
     except OSError as exc:  # pragma: no cover - depends on the host's permissions
-        print(f"easymeme: sticker storage unavailable at {STICKERS_DIR}: {exc}", flush=True)
+        _storage_error = str(exc)
         return False
+    _storage_ok = True
+    _storage_error = ""
+    return True
 
 
-STORAGE_OK = _ensure_storage()
+def _storage_advice() -> str:
+    """The actual command that fixes the usual cause, with real numbers in it."""
+    head = f"easymeme: sticker storage unavailable at {STICKERS_DIR}: {_storage_error}"
+    tail = "easymeme:   the library re-checks itself, so no restart is needed."
+
+    try:
+        who = f"{os.getuid()}:{os.getgid()}"
+    except AttributeError:
+        # No getuid means Windows, which means this is not the containerised
+        # deployment - the chown advice below would be noise at best.
+        return f"{head}\neasymeme:   check that the path exists and is writable.\n{tail}"
+
+    return (
+        f"{head}\n"
+        f"easymeme:   this process runs as {who}\n"
+        f"easymeme:   if ./data is a bind mount Docker created, it belongs to root.\n"
+        f"easymeme:   on the host, run:  mkdir -p data/stickers && chown -R {who} data\n"
+        f"{tail}"
+    )
+
+
+if not _probe_storage():
+    print(_storage_advice(), flush=True)
 
 
 def _require_storage() -> None:
-    if not STORAGE_OK:
-        raise HTTPException(503, f"Sticker storage is not writable ({STICKERS_DIR}).")
+    if not _probe_storage():
+        raise HTTPException(
+            503,
+            f"Sticker storage is not writable ({STICKERS_DIR}): {_storage_error}. "
+            "See the container log for the fix.",
+        )
 
 
 def _require_writable() -> None:
@@ -121,7 +164,14 @@ def _library() -> list[dict]:
 
 @app.get("/api/health")
 def health() -> JSONResponse:
-    return JSONResponse({"status": "ok", "service": "easymeme", "stickers": STORAGE_OK})
+    ok = _probe_storage()
+    body = {"status": "ok", "service": "easymeme", "stickers": ok}
+    if not ok:
+        # Surfaced here so the reason is one curl away, without shelling into
+        # the container to read the log.
+        body["stickers_error"] = _storage_error
+        body["stickers_path"] = str(STICKERS_DIR)
+    return JSONResponse(body)
 
 
 @app.get("/api/stickers")
@@ -204,8 +254,10 @@ class ImmutableStatic(StaticFiles):
         return response
 
 
-if STORAGE_OK:
-    app.mount("/stickers", ImmutableStatic(directory=STICKERS_DIR), name="stickers")
+# check_dir=False so the mount survives a directory that is not there yet: if the
+# volume is fixed while the app is running, these files start serving without a
+# restart, matching the re-checking _probe_storage above.
+app.mount("/stickers", ImmutableStatic(directory=STICKERS_DIR, check_dir=False), name="stickers")
 
 # html=True already serves static/index.html at "/", so no explicit route for it.
 # Mounted last: routes are matched in registration order, so /api/* and
