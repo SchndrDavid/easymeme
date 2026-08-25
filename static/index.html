@@ -316,6 +316,9 @@
   "use strict";
 
   const MAX_W = 1600;      // cap export width; phone photos are needlessly huge
+  const MAX_H = 4096;      // and height: browsers (iOS Safari worst) refuse to
+                           // allocate a canvas past a few thousand px a side,
+                           // so a tall panorama would silently come out blank
   const JPEG_Q = 0.92;
 
   const el = {
@@ -339,6 +342,18 @@
 
   let source = null;   // ImageBitmap or HTMLImageElement
 
+  const HINT_TEXT = el.hint.textContent;
+  let hintTimer = 0;
+
+  // The drop panel is gone once a photo is loaded, so a bad file dropped later
+  // has to report itself somewhere that is still on screen.
+  function notify(msg) {
+    if (!el.drop.hidden) { el.dropSub.textContent = msg; return; }
+    clearTimeout(hintTimer);
+    el.hint.textContent = msg;
+    hintTimer = setTimeout(() => { el.hint.textContent = HINT_TEXT; }, 4000);
+  }
+
   const fontAt = (px) => '600 ' + px + 'px Archivo, "Helvetica Neue", Arial, sans-serif';
 
   /* ---------- loading ---------- */
@@ -360,12 +375,18 @@
   }
 
   async function load(file) {
-    if (!file || !file.type.startsWith("image/")) return;
+    if (!file) return;
+    // Some drag sources hand over an empty MIME type, so only reject a type we
+    // positively know is wrong and let decode() judge the rest.
+    if (file.type && !file.type.startsWith("image/")) {
+      notify("That is not an image file.");
+      return;
+    }
     let next;
     try {
       next = await decode(file);
     } catch (_) {
-      el.dropSub.textContent = "That file could not be opened. Try another.";
+      notify("That file could not be opened. Try another.");
       return;
     }
     if (source && source.close) source.close();
@@ -376,10 +397,27 @@
     el.controls.hidden = false;
     el.actions.hidden = false;
     el.hint.hidden = false;
+    clearTimeout(hintTimer);
+    el.hint.textContent = HINT_TEXT;
     render();
   }
 
   /* ---------- rendering ---------- */
+
+  // A word too wide for a line of its own is split by character, otherwise it
+  // would bleed off both edges of the canvas. Iterating a string yields whole
+  // code points, so surrogate pairs survive the split.
+  function chop(word, maxWidth) {
+    const parts = [];
+    let chunk = "";
+    for (const ch of word) {
+      const test = chunk + ch;
+      if (chunk && measure.measureText(test).width > maxWidth) { parts.push(chunk); chunk = ch; }
+      else chunk = test;
+    }
+    if (chunk) parts.push(chunk);
+    return parts;
+  }
 
   function wrap(text, maxWidth) {
     const out = [];
@@ -388,13 +426,18 @@
       if (!words.length) continue;
       let line = "";
       for (const word of words) {
+        if (measure.measureText(word).width > maxWidth) {
+          if (line) { out.push(line); line = ""; }
+          const parts = chop(word, maxWidth);
+          for (let i = 0; i < parts.length - 1; i++) out.push(parts[i]);
+          line = parts[parts.length - 1] || "";
+          continue;
+        }
         const test = line ? line + " " + word : word;
-        // A word wider than the bar still gets its own line rather than being
-        // dropped; it just overflows a little.
         if (!line || measure.measureText(test).width <= maxWidth) line = test;
         else { out.push(line); line = word; }
       }
-      out.push(line);
+      if (line) out.push(line);
     }
     return out;
   }
@@ -402,7 +445,7 @@
   function render() {
     if (!source) return;
 
-    const scale = Math.min(1, MAX_W / source.width);
+    const scale = Math.min(1, MAX_W / source.width, MAX_H / source.height);
     const w = Math.max(1, Math.round(source.width * scale));
     const h = Math.max(1, Math.round(source.height * scale));
 

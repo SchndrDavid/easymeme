@@ -7,12 +7,26 @@ services:
     container_name: easymeme
     restart: unless-stopped
 
-    # Neprivilegovany uzivatel. Appka nic nezapisuje na disk, ale root uvnitr
-    # kontejneru je zbytecne riziko.
+    # Unprivileged user. The app writes nothing to disk, but running as root
+    # inside the container is a needless risk.
     user: "${EASYMEME_UID:-1000}:${EASYMEME_GID:-1000}"
 
     ports:
       - "${EASYMEME_PORT:-8104}:8000"
+
+    # The image is python:3.12-slim, so there is no curl or wget - probe the
+    # health endpoint with the interpreter that is already there. The port is
+    # read from the container env so it follows PORT if it is ever overridden.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import os,sys,urllib.request; sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:%s/api/health" % os.environ.get("PORT", "8000"), timeout=2).status == 200 else 1)
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
     logging:
       driver: json-file

@@ -1,3 +1,6 @@
+# Private deployment notes, not part of the project
+FOREMAN-REPO-TEMPLATE.txt
+
 .env
 __pycache__/
 *.pyc

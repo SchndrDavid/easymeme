@@ -17,26 +17,29 @@ Desktop extras: drag-and-drop a file onto the page, or paste one with `Ctrl+V`.
 
 ## Port and variables
 
-| Variable        | Default | Meaning                                  |
-| --------------- | ------- | ---------------------------------------- |
-| `EASYMEME_PORT` | `8104`  | Host port on mordor                      |
-| `EASYMEME_UID`  | `1000`  | UID the container runs as                |
-| `EASYMEME_GID`  | `1000`  | GID the container runs as                |
+| Variable        | Default | Meaning                                   |
+| --------------- | ------- | ----------------------------------------- |
+| `EASYMEME_PORT` | `8104`  | Host port the container is published on   |
+| `EASYMEME_UID`  | `1000`  | UID the container runs as                 |
+| `EASYMEME_GID`  | `1000`  | GID the container runs as                 |
 
 Copy `.env.example` to `.env` only if you need to override a default — the
 container starts fine without it.
 
-## Deployment
+Inside the container the app listens on `PORT`, which defaults to `8000`. Compose
+maps `EASYMEME_PORT` on the host to that port, so there is normally no reason to
+set `PORT` yourself.
 
-Through Foreman on mordor, or by hand:
+## Deployment
 
 ```
 docker compose up -d --build
 ```
 
-Then open `http://<host>:8104/`.
+Then open `http://<host>:8104/`.[^1]
 
-Health check:
+The container ships a healthcheck (`/api/health`, every 30s), so `docker ps`
+reports `healthy` once it is up. To check by hand from the host:
 
 ```
 curl -so /dev/null -w '%{http_code}\n' http://localhost:8104/api/health
@@ -53,3 +56,11 @@ mount — the container is disposable.
   internet falls back to system faces. Layout still works.
 - Export is JPEG at quality 0.92, capped at 1600 px wide.
 - Adding text to GIFs is not implemented.
+
+## License
+
+Released under the MIT License — see [LICENSE](LICENSE).
+
+[^1]: In my own homelab this is deployed through Foreman rather than by hand;
+      that is specific to my environment and irrelevant to anyone else running
+      the compose file above.

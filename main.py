@@ -9,11 +9,10 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 STATIC_DIR = Path(__file__).parent / "static"
-INDEX = STATIC_DIR / "index.html"
 
 app = FastAPI(title="EasyMeme", docs_url=None, redoc_url=None)
 
@@ -23,11 +22,8 @@ def health() -> JSONResponse:
     return JSONResponse({"status": "ok", "service": "easymeme"})
 
 
-@app.get("/")
-def index() -> FileResponse:
-    return FileResponse(INDEX, media_type="text/html")
-
-
+# html=True already serves static/index.html at "/", so no explicit route for it.
+# Mounted last: routes are matched in registration order, so /api/health wins.
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 
 

@@ -1,2 +1,23 @@
-fastapi>=0.115
-uvicorn[standard]>=0.32
+# Fully pinned so a rebuild months from now produces the same image.
+# Direct dependencies first, transitive ones below.
+#
+# uvicorn is installed without the [standard] extra on purpose: this app serves
+# one static HTML file over plain HTTP, so uvloop / httptools / websockets /
+# watchfiles / python-dotenv would only add weight to the image.
+
+fastapi==0.141.1
+uvicorn==0.52.4
+
+# transitive
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.14.2
+click==8.4.2
+colorama==0.4.6 ; sys_platform == "win32"
+h11==0.16.0
+idna==3.19
+pydantic==2.13.4
+pydantic-core==2.46.4
+starlette==1.6.0
+typing-extensions==4.16.0
+typing-inspection==0.4.4
