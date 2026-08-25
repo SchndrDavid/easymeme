@@ -56,8 +56,12 @@ async function getSession(onStatus) {
   const ort = ortRef || (ortRef = await import("/vendor/ort/ort.wasm.bundle.min.mjs"));
 
   // Without this the runtime goes looking for its .wasm on a CDN, which would
-  // break the app for anyone running it offline.
-  ort.env.wasm.wasmPaths = "/vendor/ort/";
+  // break the app for anyone running it offline. It has to be the object form
+  // naming the .wasm outright: a bare prefix string makes the loader believe it
+  // is being pointed at a full three-file distribution and go fetching
+  // ort-wasm-simd-threaded.mjs, which the .bundle build inlines and so is not
+  // vendored - see the comment in tools/fetch-vendor.mjs.
+  ort.env.wasm.wasmPaths = { wasm: "/vendor/ort/ort-wasm-simd-threaded.wasm" };
   // Threads need SharedArrayBuffer, which needs COOP/COEP headers, which would
   // break the Google Fonts link. One thread it is - a cutout takes a second or
   // two rather than a fraction of one.
