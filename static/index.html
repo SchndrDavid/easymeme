@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0b10">
+<title>EasyMeme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root{
+    --bg:#0a0b10;
+    --panel:rgba(255,255,255,.045);
+    --panel-strong:rgba(255,255,255,.075);
+    --line:rgba(255,255,255,.085);
+    --line-bright:rgba(255,255,255,.16);
+    --ink:#e9ebf2;
+    --muted:#888ea3;
+    --accent:#7b6cff;
+    --accent-2:#00c2ff;
+    --radius:18px;
+  }
+
+  html{-webkit-text-size-adjust:100%}
+
+  body{
+    min-height:100dvh;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+
+  /* Ambient glow. Fixed so it never scrolls away from the glass panels. */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(70ch 60ch at 15% -10%, rgba(123,108,255,.20), transparent 60%),
+      radial-gradient(60ch 50ch at 95% 5%, rgba(0,194,255,.13), transparent 62%),
+      radial-gradient(70ch 55ch at 50% 115%, rgba(123,108,255,.10), transparent 65%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .app{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-width:660px;
+    margin:0 auto;
+    padding:
+      calc(28px + env(safe-area-inset-top)) 18px
+      calc(40px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  header{text-align:center;margin-bottom:2px}
+
+  .logo{
+    font-family:Archivo,sans-serif;
+    font-weight:700;
+    font-size:clamp(28px,7vw,38px);
+    letter-spacing:-.03em;
+  }
+  .logo span{
+    background:linear-gradient(120deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+
+  .tag{
+    color:var(--muted);
+    font-size:14px;
+    margin-top:4px;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+  }
+
+  /* ---- stage ---- */
+
+  .stage{
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .drop{
+    border:1.5px dashed var(--line-bright);
+    border-radius:12px;
+    padding:44px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .18s ease, background .18s ease, transform .18s ease;
+    background:rgba(255,255,255,.012);
+  }
+  .drop:hover,.drop:focus-visible{
+    border-color:rgba(123,108,255,.65);
+    background:rgba(123,108,255,.07);
+    outline:none;
+  }
+  .drop.over{
+    border-color:var(--accent-2);
+    background:rgba(0,194,255,.10);
+    transform:scale(.995);
+  }
+
+  .drop-icon{
+    width:52px;height:52px;
+    margin:0 auto 14px;
+    border-radius:14px;
+    display:grid;place-items:center;
+    background:linear-gradient(135deg,rgba(123,108,255,.9),rgba(0,194,255,.9));
+    box-shadow:0 8px 24px -8px rgba(123,108,255,.7);
+  }
+  .drop-icon svg{width:26px;height:26px;stroke:#0a0b10;stroke-width:2.1;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  .drop-title{
+    font-family:Archivo,sans-serif;
+    font-weight:600;
+    font-size:17px;
+  }
+  .drop-sub{color:var(--muted);font-size:13.5px;margin-top:5px}
+
+  canvas{
+    display:block;
+    width:100%;
+    height:auto;
+    border-radius:11px;
+    background:#fff;
+  }
+
+  /* ---- controls ---- */
+
+  .controls{padding:16px;display:flex;flex-direction:column;gap:14px}
+
+  .field{display:flex;flex-direction:column;gap:7px}
+
+  label{
+    font-family:"IBM Plex Mono",monospace;
+    font-weight:500;
+    font-size:11px;
+    letter-spacing:.13em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  textarea{
+    width:100%;
+    min-height:52px;
+    resize:vertical;
+    padding:11px 13px;
+    border-radius:11px;
+    border:1px solid var(--line);
+    background:rgba(0,0,0,.28);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:16px; /* 16px keeps iOS from zooming the page on focus */
+    line-height:1.4;
+    transition:border-color .18s ease, box-shadow .18s ease;
+  }
+  textarea::placeholder{color:#5c6178}
+  textarea:focus{
+    outline:none;
+    border-color:rgba(123,108,255,.7);
+    box-shadow:0 0 0 3px rgba(123,108,255,.15);
+  }
+
+  .size-row{display:flex;align-items:center;gap:13px}
+  .size-row label{white-space:nowrap}
+
+  input[type=range]{
+    flex:1;
+    -webkit-appearance:none;appearance:none;
+    height:4px;border-radius:4px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:20px;height:20px;border-radius:50%;
+    background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.5);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:20px;height:20px;border-radius:50%;border:none;
+    background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.5);
+  }
+
+  /* ---- actions ---- */
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap}
+
+  button{
+    flex:1 1 auto;
+    min-height:50px;
+    padding:0 20px;
+    border-radius:13px;
+    border:1px solid var(--line);
+    background:var(--panel-strong);
+    color:var(--ink);
+    font-family:Archivo,sans-serif;
+    font-weight:600;
+    font-size:15.5px;
+    cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    transition:transform .12s ease, filter .18s ease, background .18s ease;
+  }
+  button:hover{background:rgba(255,255,255,.11)}
+  button:active{transform:scale(.975)}
+
+  button.primary{
+    border:none;
+    color:#080910;
+    background:linear-gradient(120deg,var(--accent),var(--accent-2));
+    box-shadow:0 10px 26px -12px rgba(123,108,255,.9);
+  }
+  button.primary:hover{filter:brightness(1.07)}
+
+  button.ghost{flex:0 0 auto;background:transparent;color:var(--muted)}
+  button.ghost:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+
+  button svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.1;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  .hint{
+    text-align:center;
+    color:var(--muted);
+    font-size:12.5px;
+  }
+
+  [hidden]{display:none !important}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <div class="logo">Easy<span>Meme</span></div>
+    <p class="tag">Photo in, caption on, share out.</p>
+  </header>
+
+  <section class="stage panel">
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Add a photo">
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2.5"/>
+          <circle cx="8.5" cy="10" r="1.6"/>
+          <path d="M4 17l4.5-4.5a2 2 0 0 1 2.8 0L16 17"/>
+          <path d="M14.5 15.5l1.8-1.8a2 2 0 0 1 2.8 0L21 16"/>
+        </svg>
+      </div>
+      <div class="drop-title">Add a photo</div>
+      <div class="drop-sub" id="dropSub">Tap to choose from your device</div>
+    </div>
+    <canvas id="canvas" hidden></canvas>
+  </section>
+
+  <section class="controls panel" id="controls" hidden>
+    <div class="field">
+      <label for="topText">Top bar</label>
+      <textarea id="topText" rows="2" placeholder="Leave empty for no bar" autocomplete="off" autocorrect="off"></textarea>
+    </div>
+    <div class="field">
+      <label for="botText">Bottom bar</label>
+      <textarea id="botText" rows="2" placeholder="Leave empty for no bar" autocomplete="off" autocorrect="off"></textarea>
+    </div>
+    <div class="size-row">
+      <label for="size">Text size</label>
+      <input type="range" id="size" min="30" max="115" value="56" aria-label="Text size">
+    </div>
+  </section>
+
+  <div class="actions" id="actions" hidden>
+    <button class="primary" id="shareBtn" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+      Share
+    </button>
+    <button class="primary" id="dlBtn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M4 20h16"/></svg>
+      Download
+    </button>
+    <button class="ghost" id="newBtn" title="Pick another photo">New photo</button>
+  </div>
+
+  <p class="hint" id="hint" hidden>Nothing is uploaded &mdash; the meme is built on your device.</p>
+
+</div>
+
+<input type="file" id="file" accept="image/*" hidden>
+
+<script>
+(() => {
+  "use strict";
+
+  const MAX_W = 1600;      // cap export width; phone photos are needlessly huge
+  const JPEG_Q = 0.92;
+
+  const el = {
+    drop: document.getElementById("drop"),
+    dropSub: document.getElementById("dropSub"),
+    canvas: document.getElementById("canvas"),
+    controls: document.getElementById("controls"),
+    actions: document.getElementById("actions"),
+    hint: document.getElementById("hint"),
+    top: document.getElementById("topText"),
+    bot: document.getElementById("botText"),
+    size: document.getElementById("size"),
+    file: document.getElementById("file"),
+    shareBtn: document.getElementById("shareBtn"),
+    dlBtn: document.getElementById("dlBtn"),
+    newBtn: document.getElementById("newBtn"),
+  };
+
+  const ctx = el.canvas.getContext("2d");
+  const measure = document.createElement("canvas").getContext("2d");
+
+  let source = null;   // ImageBitmap or HTMLImageElement
+
+  const fontAt = (px) => '600 ' + px + 'px Archivo, "Helvetica Neue", Arial, sans-serif';
+
+  /* ---------- loading ---------- */
+
+  async function decode(file) {
+    // createImageBitmap honours EXIF orientation, which matters for iPhone shots.
+    if (window.createImageBitmap) {
+      try {
+        return await createImageBitmap(file, { imageOrientation: "from-image" });
+      } catch (_) { /* older Safari falls through to the <img> path */ }
+    }
+    return await new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("decode failed")); };
+      img.src = url;
+    });
+  }
+
+  async function load(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    let next;
+    try {
+      next = await decode(file);
+    } catch (_) {
+      el.dropSub.textContent = "That file could not be opened. Try another.";
+      return;
+    }
+    if (source && source.close) source.close();
+    source = next;
+
+    el.drop.hidden = true;
+    el.canvas.hidden = false;
+    el.controls.hidden = false;
+    el.actions.hidden = false;
+    el.hint.hidden = false;
+    render();
+  }
+
+  /* ---------- rendering ---------- */
+
+  function wrap(text, maxWidth) {
+    const out = [];
+    for (const para of text.split("\n")) {
+      const words = para.split(/\s+/).filter(Boolean);
+      if (!words.length) continue;
+      let line = "";
+      for (const word of words) {
+        const test = line ? line + " " + word : word;
+        // A word wider than the bar still gets its own line rather than being
+        // dropped; it just overflows a little.
+        if (!line || measure.measureText(test).width <= maxWidth) line = test;
+        else { out.push(line); line = word; }
+      }
+      out.push(line);
+    }
+    return out;
+  }
+
+  function render() {
+    if (!source) return;
+
+    const scale = Math.min(1, MAX_W / source.width);
+    const w = Math.max(1, Math.round(source.width * scale));
+    const h = Math.max(1, Math.round(source.height * scale));
+
+    const fs = Math.round(w * (Number(el.size.value) / 1000));
+    const lh = Math.round(fs * 1.26);
+    const padX = Math.round(w * 0.045);
+    const padY = Math.round(fs * 0.62);
+
+    measure.font = fontAt(fs);
+    const inner = w - padX * 2;
+    const topLines = wrap(el.top.value, inner);
+    const botLines = wrap(el.bot.value, inner);
+
+    const topH = topLines.length ? topLines.length * lh + padY * 2 : 0;
+    const botH = botLines.length ? botLines.length * lh + padY * 2 : 0;
+
+    el.canvas.width = w;
+    el.canvas.height = topH + h + botH;
+
+    // Resizing a canvas resets its context, so every style is set afterwards.
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, el.canvas.height);
+    ctx.drawImage(source, 0, topH, w, h);
+
+    ctx.fillStyle = "#000000";
+    ctx.font = fontAt(fs);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    topLines.forEach((line, i) => ctx.fillText(line, w / 2, padY + lh * i + lh / 2));
+    botLines.forEach((line, i) => ctx.fillText(line, w / 2, topH + h + padY + lh * i + lh / 2));
+  }
+
+  /* ---------- export ---------- */
+
+  function stamp() {
+    const d = new Date(), p = (n) => String(n).padStart(2, "0");
+    return "" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate())
+      + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+  }
+
+  const toBlob = () => new Promise((resolve) => el.canvas.toBlob(resolve, "image/jpeg", JPEG_Q));
+
+  async function download() {
+    const blob = await toBlob();
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "easymeme-" + stamp() + ".jpg";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  async function share() {
+    const blob = await toBlob();
+    if (!blob) return;
+    const file = new File([blob], "easymeme-" + stamp() + ".jpg", { type: "image/jpeg" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+      } catch (err) {
+        if (err && err.name === "AbortError") return;   // user dismissed the sheet
+        download();
+      }
+    } else {
+      download();
+    }
+  }
+
+  // canShare is the only reliable signal for file sharing support, so probe it
+  // with a throwaway file before offering the button.
+  if (navigator.canShare && window.File) {
+    try {
+      const probe = new File([new Blob([""], { type: "image/jpeg" })], "p.jpg", { type: "image/jpeg" });
+      if (navigator.canShare({ files: [probe] })) el.shareBtn.hidden = false;
+    } catch (_) { /* leave Share hidden */ }
+  }
+
+  /* ---------- events ---------- */
+
+  const pick = () => el.file.click();
+
+  el.drop.addEventListener("click", pick);
+  el.drop.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
+  });
+  el.newBtn.addEventListener("click", pick);
+
+  el.file.addEventListener("change", () => {
+    load(el.file.files && el.file.files[0]);
+    el.file.value = "";   // re-picking the same file must still fire change
+  });
+
+  el.top.addEventListener("input", render);
+  el.bot.addEventListener("input", render);
+  el.size.addEventListener("input", render);
+
+  el.dlBtn.addEventListener("click", download);
+  el.shareBtn.addEventListener("click", share);
+
+  ["dragenter", "dragover"].forEach((t) =>
+    el.drop.addEventListener(t, (e) => { e.preventDefault(); el.drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) =>
+    el.drop.addEventListener(t, () => el.drop.classList.remove("over")));
+
+  document.addEventListener("dragover", (e) => e.preventDefault());
+  document.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) load(f);
+  });
+
+  document.addEventListener("paste", (e) => {
+    const files = e.clipboardData && e.clipboardData.files;
+    if (files && files.length) load(files[0]);
+  });
+
+  // Text is measured in Archivo, so re-render once the webfont lands or the
+  // bars stay sized for the fallback face.
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('600 40px Archivo').then(render).catch(() => {});
+  }
+
+  if (matchMedia("(pointer:fine)").matches) {
+    el.dropSub.textContent = "Click to choose · or drop / paste an image";
+  }
+})();
+</script>
+
+</body>
+</html>

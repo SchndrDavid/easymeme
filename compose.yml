@@ -1,0 +1,21 @@
+name: easymeme
+
+services:
+  easymeme:
+    build: .
+    image: easymeme
+    container_name: easymeme
+    restart: unless-stopped
+
+    # Neprivilegovany uzivatel. Appka nic nezapisuje na disk, ale root uvnitr
+    # kontejneru je zbytecne riziko.
+    user: "${EASYMEME_UID:-1000}:${EASYMEME_GID:-1000}"
+
+    ports:
+      - "${EASYMEME_PORT:-8104}:8000"
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

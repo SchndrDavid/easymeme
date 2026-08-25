@@ -1,0 +1,222 @@
+
+═══════════════════════════════════════════════════════════════════════════════
+ ŠABLONA REPOZITÁŘE PRO FOREMAN
+ Jak strukturovat appku, aby šla na mordor nasadit jedním kliknutím.
+
+ Použití: vlož tenhle soubor do složky projektu a řekni Claude Code
+ "drž se FOREMAN-REPO-TEMPLATE.txt".
+═══════════════════════════════════════════════════════════════════════════════
+
+CÍL
+  Repozitář, který Foreman (http://100.108.145.60:8103) naklonuje do
+  /srv/<jméno-repa>/ a spustí přes docker compose bez jediného ručního
+  zásahu na serveru. Tok je jednosměrný: GitHub → mordor. Z mordoru se
+  nikdy nic nepushuje.
+
+CÍLOVÝ STROJ — počítej s tím
+  Dell Latitude 5490, Intel i5-7300U (2 jádra / 4 vlákna), 16 GB RAM,
+  Ubuntu Server 26.04. Docker 29, Compose v5. Vše za Tailscale,
+  nic není veřejné. Build běží NA TOMHLE stroji, takže těžké image bolí.
+
+
+───────────────────────────────────────────────────────────────────────────────
+ 1) POVINNÁ STRUKTURA
+───────────────────────────────────────────────────────────────────────────────
+
+    compose.yml           ← v ROOTU repa. Foreman hledá compose.yml,
+                            compose.yaml, docker-compose.yml, docker-compose.yaml
+    Dockerfile
+    .env.example          ← dokumentace proměnných, bez skutečných hodnot
+    .gitignore
+    .dockerignore
+    data/.gitkeep         ← pokud appka něco zapisuje na disk (viz sekce 4)
+    README.md
+    <zdrojáky>
+
+  Jméno repa = jméno adresáře na mordoru = jméno compose projektu.
+  Volit krátké, anglické, malými písmeny, bez podtržítek: `gymtrack`,
+  `handover`, `mordoritdown`.
+
+
+───────────────────────────────────────────────────────────────────────────────
+ 2) compose.yml — vzor
+───────────────────────────────────────────────────────────────────────────────
+
+    name: sluzba
+
+    services:
+      sluzba:
+        build: .
+        image: sluzba
+        container_name: sluzba
+        restart: unless-stopped
+
+        # UID/GID musí sedět na vlastníka ./data, jinak SQLite nezapíše.
+        user: "${SLUZBA_UID:-1000}:${SLUZBA_GID:-1000}"
+
+        # Port VŽDY přes proměnnou s defaultem. V repu rozumný default,
+        # na mordoru případný override přes .env bez sahání do gitu.
+        ports:
+          - "${SLUZBA_PORT:-8104}:8000"
+
+        volumes:
+          - ./data:/data
+
+        environment:
+          SLUZBA_DB_PATH: /data/sluzba.db
+
+        logging:
+          driver: json-file
+          options:
+            max-size: "10m"
+            max-file: "3"
+
+  PRAVIDLA
+    - `name:` na prvním řádku. Bez toho Compose odvodí jméno projektu
+      z adresáře a způsobí kolize sítí.
+    - Port psát "8104:8000", NE "0.0.0.0:8104:8000". Bez prefixu Docker
+      naváže IPv4 i IPv6; s explicitním 0.0.0.0 dostaneš jen v4.
+    - Vazba na 127.0.0.1 znamená, že se na službu nedostaneš z iPhonu
+      ani z PC. Nedělat.
+    - `logging` limity nejsou volitelné. Bez nich žere log místo na SSD,
+      dokud se disk nezaplní.
+    - Žádné `depends_on` na databázi, pokud to nemusí být. Jedna appka =
+      jeden kontejner. Postgres/Redis/MinIO na dvou jádrech nemá cenu.
+
+  VOLNÉ PORTY — ověřit v tabu "Porty" ve Foremanu před volbou defaultu.
+    Obsazené: 8090 startpage, 8091 doomsday, 8096 Jellyfin, 8100 handover,
+              8101 gymtrack, 8102 mordoritdown, 8103 Foreman
+    Rezervované: 8110, 8111 (Zapisnik)
+    Volné: 8104–8109
+
+
+───────────────────────────────────────────────────────────────────────────────
+ 3) .env.example a .env
+───────────────────────────────────────────────────────────────────────────────
+
+  .env.example JDE do gitu. Obsahuje klíče a nezávadné defaulty, NIKDY
+  skutečné hodnoty:
+
+      # Port na mordoru. Přepiš, jen když se pereš s jinou službou.
+      SLUZBA_PORT=8104
+
+      # UID/GID vlastníka ./data. Na mordoru je to 1000:1000.
+      SLUZBA_UID=1000
+      SLUZBA_GID=1000
+
+      # Klíč k API. Vygeneruj na <kde>, sem vlož skutečnou hodnotu.
+      SLUZBA_API_KEY=
+
+  .env NEJDE do gitu. Vytvoří se ručně na mordoru:
+      cd /srv/sluzba && cp .env.example .env && chmod 600 .env && nano .env
+
+  !! `git reset --hard` na .env nesáhne — je untracked, takže hodnoty na
+     mordoru přežijí libovolný počet aktualizací přes Foreman.
+  !! Foreman .env čte jen kvůli rozvinutí ${PORT}. Nevytváří ho ani
+     nepřepisuje. Když chybí a .env.example existuje, napíše varování
+     do výpisu, ale deploy nezastaví.
+  !! Když appka bez .env spadne, MUSÍ to napsat do logu srozumitelně,
+     ne spadnout na KeyError. Číst přes os.getenv s defaultem.
+
+
+───────────────────────────────────────────────────────────────────────────────
+ 4) DATA NA DISKU — nejčastější chyba
+───────────────────────────────────────────────────────────────────────────────
+
+  Když je `data/` v .gitignore a v repu fyzicky není, Docker ji při
+  prvním `up` vytvoří sám — jako ROOT. Kontejner běžící pod 1000:1000
+  do ní nezapíše a spadne na:
+      sqlite3.OperationalError: unable to open database file
+
+  ŘEŠENÍ — obojí, ne jen jedno:
+
+    data/.gitkeep                 (prázdný soubor, jde do gitu)
+
+    .gitignore:
+        data/*
+        !data/.gitkeep
+        .env
+        __pycache__/
+        *.pyc
+
+  Tím se `data/` naklonuje jako existující složka vlastněná mordorserverem
+  a Docker ji nikdy nevytvoří pod rootem.
+
+
+───────────────────────────────────────────────────────────────────────────────
+ 5) Dockerfile — vzor
+───────────────────────────────────────────────────────────────────────────────
+
+    FROM python:3.12-slim
+    WORKDIR /app
+    COPY requirements.txt .
+    RUN pip install --no-cache-dir -r requirements.txt
+    COPY main.py .
+    COPY static ./static
+    EXPOSE 8000
+    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  PRAVIDLA
+    - requirements.txt kopírovat PŘED zdrojáky. Jinak se `pip install`
+      nezacachuje a každý rebuild na dvou jádrech trvá minuty navíc.
+    - Držet python:3.12-slim. Uvnitř kontejneru je verze na tobě, ale
+      3.12 má hotové wheely pro všechno; na 3.14 se pydantic-core
+      kompiluje přes Rust a padá.
+    - V requirements.txt psát `>=`, ne `==`.
+    - .dockerignore musí obsahovat: .git, data, .env, __pycache__, venv
+    - Kontejner poslouchá na 0.0.0.0 uvnitř, mapování řeší compose.
+    - Neinstalovat balíčky "pro jistotu". Každý MB se buildí na i5-7300U.
+
+
+───────────────────────────────────────────────────────────────────────────────
+ 6) KONVENCE APPEK NA MORDORU
+───────────────────────────────────────────────────────────────────────────────
+
+  - Backend FastAPI. Data v /data uvnitř kontejneru (bind mount ./data).
+  - Frontend single-file HTML, nulové externí závislosti kromě fontů.
+    Glassmorphism, tmavý motiv, Archivo + IBM Plex.
+  - Stav patří na server, ne do localStorage — jinak se iPhone a PC
+    rozejdou. Výjimka: čistě lokální preference (motiv, historie).
+  - Interface anglicky.
+  - Frontend musí odvozovat BASE prefix z window.location.pathname za běhu.
+    Absolutní cesty /api/… se rozbijí pod subpathem.
+  - Žádná autentizace. Vše je za Tailscale, nic není veřejné.
+
+  !! `curl -I` (HEAD) vrací u FastAPI 405, protože je zaregistrovaný jen
+     GET. Není to chyba. Testovat: curl -so /dev/null -w '%{http_code}\n'
+
+
+───────────────────────────────────────────────────────────────────────────────
+ 7) README.md — co v něm musí být
+───────────────────────────────────────────────────────────────────────────────
+
+  - Jedna věta, co to dělá.
+  - Port a proměnné z .env.example.
+  - Nasazení: "Přes Foreman na mordoru, nebo ručně:
+        docker compose up -d --build"
+  - Co appka zapisuje na disk a kam.
+  - Screenshot, pokud na něj README odkazuje. (Odkazovat na neexistující
+    screenshot.png je otevřený úkol u handoveru už týden.)
+
+
+───────────────────────────────────────────────────────────────────────────────
+ 8) CHECKLIST PŘED PRVNÍM PUSHEM
+───────────────────────────────────────────────────────────────────────────────
+
+  [ ] compose.yml je v rootu a má `name:` na prvním řádku
+  [ ] port je zapsaný jako ${SLUZBA_PORT:-8xxx} a je volný
+  [ ] .env je v .gitignore, .env.example v gitu bez skutečných hodnot
+  [ ] data/.gitkeep existuje + .gitignore má `data/*` a `!data/.gitkeep`
+  [ ] user: "${SLUZBA_UID:-1000}:${SLUZBA_GID:-1000}"
+  [ ] logging limity nastavené
+  [ ] .dockerignore obsahuje .git, data, .env
+  [ ] projetá historie commitů na klíče a hesla
+      (precedens: přihlašovací údaje se dostaly na GitHub,
+       repozitář musel být smazán)
+  [ ] `docker compose up -d --build` projde lokálně z čistého clonu
+
+  Až tohle sedí: push na GitHub → Foreman → Nasadit.
+  Další změny: push → Foreman → Aktualizovat.
+
+
+═══════════════════════════════════════════════════════════════════════════════
