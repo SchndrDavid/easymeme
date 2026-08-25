@@ -1,0 +1,27 @@
+{
+  "gifenc.esm.js": {
+    "sha256": "217761244379253ba5815510d3048a4fb1f4c4dbe9fb51a5cfbfe26f34eec093",
+    "bytes": 9098,
+    "source": "https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js"
+  },
+  "ort/ort.wasm.bundle.min.mjs": {
+    "sha256": "9bfe69fdc86a6ce7aacaccfada8d3124237328efd61eac0e594832488ef3457d",
+    "bytes": 68628,
+    "source": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.wasm.bundle.min.mjs"
+  },
+  "ort/ort-wasm-simd-threaded.wasm": {
+    "sha256": "3260fcdb33b4fc4ec33e89caf392e13625823e01049d3bf32c38464f9dbfe14c",
+    "bytes": 11815498,
+    "source": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort-wasm-simd-threaded.wasm"
+  },
+  "u2netp.onnx": {
+    "sha256": "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8",
+    "bytes": 4574861,
+    "source": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"
+  },
+  "gifuct.esm.js": {
+    "sha256": "be38bdd68c204c59096989073423a95c7ef9e84c2ae12b6c6aa92dfdda45f2ea",
+    "bytes": 7774,
+    "source": "gifuct-js@2.1.2"
+  }
+}

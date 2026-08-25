@@ -1,0 +1,404 @@
+/* EasyMeme styles.
+   The palette, glass panels and ambient glow are unchanged from the original
+   single-file build; everything from "timeline" downwards is new. */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0a0b10;
+  --panel:rgba(255,255,255,.045);
+  --panel-strong:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.085);
+  --line-bright:rgba(255,255,255,.16);
+  --ink:#e9ebf2;
+  --muted:#888ea3;
+  --accent:#7b6cff;
+  --accent-2:#00c2ff;
+  --radius:18px;
+}
+
+html{-webkit-text-size-adjust:100%}
+
+body{
+  min-height:100dvh;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* Ambient glow. Fixed so it never scrolls away from the glass panels. */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(70ch 60ch at 15% -10%, rgba(123,108,255,.20), transparent 60%),
+    radial-gradient(60ch 50ch at 95% 5%, rgba(0,194,255,.13), transparent 62%),
+    radial-gradient(70ch 55ch at 50% 115%, rgba(123,108,255,.10), transparent 65%);
+  pointer-events:none;
+  z-index:0;
+}
+
+.app{
+  position:relative;
+  z-index:1;
+  width:100%;
+  max-width:660px;
+  margin:0 auto;
+  padding:
+    calc(28px + env(safe-area-inset-top)) 18px
+    calc(40px + env(safe-area-inset-bottom));
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+header{text-align:center;margin-bottom:2px}
+
+.logo{
+  font-family:Archivo,sans-serif;
+  font-weight:700;
+  font-size:clamp(28px,7vw,38px);
+  letter-spacing:-.03em;
+}
+.logo span{
+  background:linear-gradient(120deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+
+.tag{color:var(--muted);font-size:14px;margin-top:4px}
+
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+}
+
+/* ---- stage ---- */
+
+.stage{padding:12px;display:flex;flex-direction:column;gap:10px}
+
+.drop{
+  border:1.5px dashed var(--line-bright);
+  border-radius:12px;
+  padding:44px 20px;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .18s ease, background .18s ease, transform .18s ease;
+  background:rgba(255,255,255,.012);
+}
+.drop:hover,.drop:focus-visible{
+  border-color:rgba(123,108,255,.65);
+  background:rgba(123,108,255,.07);
+  outline:none;
+}
+.drop.over{
+  border-color:var(--accent-2);
+  background:rgba(0,194,255,.10);
+  transform:scale(.995);
+}
+
+.drop-icon{
+  width:52px;height:52px;
+  margin:0 auto 14px;
+  border-radius:14px;
+  display:grid;place-items:center;
+  background:linear-gradient(135deg,rgba(123,108,255,.9),rgba(0,194,255,.9));
+  box-shadow:0 8px 24px -8px rgba(123,108,255,.7);
+}
+.drop-icon svg{width:26px;height:26px;stroke:#0a0b10;stroke-width:2.1;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.drop-title{font-family:Archivo,sans-serif;font-weight:600;font-size:17px}
+.drop-sub{color:var(--muted);font-size:13.5px;margin-top:5px}
+
+.canvas-wrap{position:relative;line-height:0}
+
+canvas#canvas{
+  display:block;
+  width:100%;
+  height:auto;
+  border-radius:11px;
+  background:#fff;
+  touch-action:none;   /* dragging a layer must not scroll the page */
+}
+
+/* Selection outline for the active overlay layer. Purely a preview aid - it is
+   a DOM box over the canvas, so it never ends up in the exported pixels. */
+.sel-box{
+  position:absolute;
+  border:1.5px dashed var(--accent-2);
+  border-radius:4px;
+  pointer-events:none;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35);
+}
+
+/* ---- progress ---- */
+
+.busy{display:flex;flex-direction:column;gap:6px}
+.busy-bar{height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
+.busy-bar i{
+  display:block;height:100%;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  transition:width .12s linear;
+}
+.busy-label{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted)}
+
+/* ---- timeline ---- */
+
+.timeline{padding:12px}
+canvas#timeline{
+  display:block;
+  width:100%;
+  height:80px;
+  border-radius:8px;
+  touch-action:none;
+}
+.tl-meta{
+  display:flex;align-items:center;gap:10px;
+  margin-top:9px;
+  font-family:"IBM Plex Mono",monospace;
+  font-size:11.5px;
+  color:var(--muted);
+}
+.tl-meta .grow{flex:1}
+.tl-meta .warn{color:#ffb27a}
+
+/* ---- tabs ---- */
+
+.tabs{display:flex;gap:6px}
+.tabs button{
+  flex:1;min-height:40px;padding:0 10px;
+  border-radius:11px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--muted);
+  font-family:Archivo,sans-serif;font-weight:600;font-size:14px;
+  cursor:pointer;
+}
+.tabs button.on{
+  color:#080910;
+  border-color:transparent;
+  background:linear-gradient(120deg,var(--accent),var(--accent-2));
+}
+
+/* ---- controls ---- */
+
+.controls{padding:16px;display:flex;flex-direction:column;gap:14px}
+
+.field{display:flex;flex-direction:column;gap:7px}
+
+label{
+  font-family:"IBM Plex Mono",monospace;
+  font-weight:500;
+  font-size:11px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+
+textarea,input[type=text]{
+  width:100%;
+  min-height:52px;
+  resize:vertical;
+  padding:11px 13px;
+  border-radius:11px;
+  border:1px solid var(--line);
+  background:rgba(0,0,0,.28);
+  color:var(--ink);
+  font-family:inherit;
+  font-size:16px; /* 16px keeps iOS from zooming the page on focus */
+  line-height:1.4;
+  transition:border-color .18s ease, box-shadow .18s ease;
+}
+input[type=text]{min-height:44px}
+textarea::placeholder{color:#5c6178}
+textarea:focus,input[type=text]:focus{
+  outline:none;
+  border-color:rgba(123,108,255,.7);
+  box-shadow:0 0 0 3px rgba(123,108,255,.15);
+}
+
+.size-row{display:flex;align-items:center;gap:13px}
+.size-row label{white-space:nowrap}
+.size-row output{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);
+  min-width:5ch;text-align:right;
+}
+
+input[type=range]{
+  flex:1;
+  -webkit-appearance:none;appearance:none;
+  height:4px;border-radius:4px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:20px;height:20px;border-radius:50%;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.5);
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;border-radius:50%;border:none;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.5);
+}
+
+input[type=color]{
+  width:44px;height:34px;padding:0;
+  border:1px solid var(--line);border-radius:9px;
+  background:rgba(0,0,0,.28);cursor:pointer;
+}
+
+/* ---- layer list ---- */
+
+.layer-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.layer-list:empty::after{
+  content:"No layers yet.";
+  color:var(--muted);font-size:13px;
+}
+.layer-row{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;
+  border:1px solid var(--line);
+  border-radius:11px;
+  background:rgba(0,0,0,.2);
+  cursor:pointer;
+}
+.layer-row.on{border-color:rgba(123,108,255,.75);background:rgba(123,108,255,.12)}
+.layer-row .name{
+  flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:14px;
+}
+.layer-row .range{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted);
+  white-space:nowrap;
+}
+.layer-row.off .name{opacity:.45;text-decoration:line-through}
+.icon-btn{
+  flex:0 0 auto;
+  width:30px;height:30px;min-height:0;padding:0;
+  border-radius:8px;
+  display:grid;place-items:center;
+  background:transparent;border:1px solid transparent;color:var(--muted);
+  cursor:pointer;
+}
+.icon-btn:hover{background:rgba(255,255,255,.08);color:var(--ink)}
+.icon-btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.sub{
+  display:flex;flex-direction:column;gap:12px;
+  padding-top:12px;border-top:1px solid var(--line);
+}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row > .grow{flex:1}
+
+.seg{display:flex;gap:4px}
+.seg button{
+  flex:1;min-height:36px;padding:0 8px;font-size:13px;border-radius:9px;
+  background:rgba(0,0,0,.25);border:1px solid var(--line);color:var(--muted);
+  font-family:Archivo,sans-serif;font-weight:600;cursor:pointer;
+}
+.seg button.on{background:rgba(123,108,255,.2);border-color:rgba(123,108,255,.7);color:var(--ink)}
+
+/* ---- stickers ---- */
+
+.sticker-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(76px,1fr));
+  gap:8px;
+}
+.sticker-grid:empty::after{
+  content:"Library is empty 4 cut your first sticker from a photo.";
+  color:var(--muted);font-size:13px;grid-column:1/-1;
+}
+.sticker{
+  position:relative;
+  aspect-ratio:1;
+  border-radius:11px;
+  border:1px solid var(--line);
+  background:
+    conic-gradient(from 45deg, rgba(255,255,255,.06) 0 25%, transparent 0 50%, rgba(255,255,255,.06) 0 75%, transparent 0)
+    0 0/14px 14px,
+    rgba(0,0,0,.25);
+  cursor:pointer;
+  padding:0;min-height:0;
+}
+.sticker img{width:100%;height:100%;object-fit:contain;display:block;padding:5px}
+.sticker:hover{border-color:rgba(123,108,255,.7)}
+.sticker .del{
+  position:absolute;top:2px;right:2px;
+  width:22px;height:22px;border-radius:7px;
+  background:rgba(10,11,16,.8);color:var(--muted);
+  display:none;place-items:center;border:none;cursor:pointer;min-height:0;padding:0;
+}
+.sticker:hover .del,.sticker:focus-within .del{display:grid}
+.sticker .del svg{width:12px;height:12px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round}
+
+/* ---- cutout editor ---- */
+
+.cutout-wrap{
+  position:relative;
+  border-radius:11px;
+  overflow:hidden;
+  background:
+    conic-gradient(from 45deg,#2a2d3a 0 25%,#1d202b 0 50%,#2a2d3a 0 75%,#1d202b 0)
+    0 0/18px 18px;
+}
+canvas#cutoutCanvas{display:block;width:100%;height:auto;touch-action:none}
+
+/* ---- actions ---- */
+
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+
+button{
+  flex:1 1 auto;
+  min-height:50px;
+  padding:0 20px;
+  border-radius:13px;
+  border:1px solid var(--line);
+  background:var(--panel-strong);
+  color:var(--ink);
+  font-family:Archivo,sans-serif;
+  font-weight:600;
+  font-size:15.5px;
+  cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  transition:transform .12s ease, filter .18s ease, background .18s ease;
+}
+button:hover{background:rgba(255,255,255,.11)}
+button:active{transform:scale(.975)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+button.primary{
+  border:none;
+  color:#080910;
+  background:linear-gradient(120deg,var(--accent),var(--accent-2));
+  box-shadow:0 10px 26px -12px rgba(123,108,255,.9);
+}
+button.primary:hover{filter:brightness(1.07)}
+
+button.ghost{flex:0 0 auto;background:transparent;color:var(--muted)}
+button.ghost:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+
+button.small{min-height:38px;font-size:13.5px;padding:0 14px;flex:0 0 auto}
+
+button svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.1;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.hint{text-align:center;color:var(--muted);font-size:12.5px}
+
+[hidden]{display:none !important}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important}
+}

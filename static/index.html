@@ -8,250 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
-  :root{
-    --bg:#0a0b10;
-    --panel:rgba(255,255,255,.045);
-    --panel-strong:rgba(255,255,255,.075);
-    --line:rgba(255,255,255,.085);
-    --line-bright:rgba(255,255,255,.16);
-    --ink:#e9ebf2;
-    --muted:#888ea3;
-    --accent:#7b6cff;
-    --accent-2:#00c2ff;
-    --radius:18px;
-  }
-
-  html{-webkit-text-size-adjust:100%}
-
-  body{
-    min-height:100dvh;
-    background:var(--bg);
-    color:var(--ink);
-    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
-    line-height:1.5;
-    -webkit-font-smoothing:antialiased;
-    overflow-x:hidden;
-  }
-
-  /* Ambient glow. Fixed so it never scrolls away from the glass panels. */
-  body::before{
-    content:"";
-    position:fixed;
-    inset:0;
-    background:
-      radial-gradient(70ch 60ch at 15% -10%, rgba(123,108,255,.20), transparent 60%),
-      radial-gradient(60ch 50ch at 95% 5%, rgba(0,194,255,.13), transparent 62%),
-      radial-gradient(70ch 55ch at 50% 115%, rgba(123,108,255,.10), transparent 65%);
-    pointer-events:none;
-    z-index:0;
-  }
-
-  .app{
-    position:relative;
-    z-index:1;
-    width:100%;
-    max-width:660px;
-    margin:0 auto;
-    padding:
-      calc(28px + env(safe-area-inset-top)) 18px
-      calc(40px + env(safe-area-inset-bottom));
-    display:flex;
-    flex-direction:column;
-    gap:16px;
-  }
-
-  header{text-align:center;margin-bottom:2px}
-
-  .logo{
-    font-family:Archivo,sans-serif;
-    font-weight:700;
-    font-size:clamp(28px,7vw,38px);
-    letter-spacing:-.03em;
-  }
-  .logo span{
-    background:linear-gradient(120deg,var(--accent),var(--accent-2));
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-  }
-
-  .tag{
-    color:var(--muted);
-    font-size:14px;
-    margin-top:4px;
-  }
-
-  .panel{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    backdrop-filter:blur(18px) saturate(140%);
-    -webkit-backdrop-filter:blur(18px) saturate(140%);
-  }
-
-  /* ---- stage ---- */
-
-  .stage{
-    padding:12px;
-    display:flex;
-    flex-direction:column;
-  }
-
-  .drop{
-    border:1.5px dashed var(--line-bright);
-    border-radius:12px;
-    padding:44px 20px;
-    text-align:center;
-    cursor:pointer;
-    transition:border-color .18s ease, background .18s ease, transform .18s ease;
-    background:rgba(255,255,255,.012);
-  }
-  .drop:hover,.drop:focus-visible{
-    border-color:rgba(123,108,255,.65);
-    background:rgba(123,108,255,.07);
-    outline:none;
-  }
-  .drop.over{
-    border-color:var(--accent-2);
-    background:rgba(0,194,255,.10);
-    transform:scale(.995);
-  }
-
-  .drop-icon{
-    width:52px;height:52px;
-    margin:0 auto 14px;
-    border-radius:14px;
-    display:grid;place-items:center;
-    background:linear-gradient(135deg,rgba(123,108,255,.9),rgba(0,194,255,.9));
-    box-shadow:0 8px 24px -8px rgba(123,108,255,.7);
-  }
-  .drop-icon svg{width:26px;height:26px;stroke:#0a0b10;stroke-width:2.1;fill:none;stroke-linecap:round;stroke-linejoin:round}
-
-  .drop-title{
-    font-family:Archivo,sans-serif;
-    font-weight:600;
-    font-size:17px;
-  }
-  .drop-sub{color:var(--muted);font-size:13.5px;margin-top:5px}
-
-  canvas{
-    display:block;
-    width:100%;
-    height:auto;
-    border-radius:11px;
-    background:#fff;
-  }
-
-  /* ---- controls ---- */
-
-  .controls{padding:16px;display:flex;flex-direction:column;gap:14px}
-
-  .field{display:flex;flex-direction:column;gap:7px}
-
-  label{
-    font-family:"IBM Plex Mono",monospace;
-    font-weight:500;
-    font-size:11px;
-    letter-spacing:.13em;
-    text-transform:uppercase;
-    color:var(--muted);
-  }
-
-  textarea{
-    width:100%;
-    min-height:52px;
-    resize:vertical;
-    padding:11px 13px;
-    border-radius:11px;
-    border:1px solid var(--line);
-    background:rgba(0,0,0,.28);
-    color:var(--ink);
-    font-family:inherit;
-    font-size:16px; /* 16px keeps iOS from zooming the page on focus */
-    line-height:1.4;
-    transition:border-color .18s ease, box-shadow .18s ease;
-  }
-  textarea::placeholder{color:#5c6178}
-  textarea:focus{
-    outline:none;
-    border-color:rgba(123,108,255,.7);
-    box-shadow:0 0 0 3px rgba(123,108,255,.15);
-  }
-
-  .size-row{display:flex;align-items:center;gap:13px}
-  .size-row label{white-space:nowrap}
-
-  input[type=range]{
-    flex:1;
-    -webkit-appearance:none;appearance:none;
-    height:4px;border-radius:4px;
-    background:linear-gradient(90deg,var(--accent),var(--accent-2));
-    cursor:pointer;
-  }
-  input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;appearance:none;
-    width:20px;height:20px;border-radius:50%;
-    background:#fff;
-    box-shadow:0 2px 8px rgba(0,0,0,.5);
-  }
-  input[type=range]::-moz-range-thumb{
-    width:20px;height:20px;border-radius:50%;border:none;
-    background:#fff;
-    box-shadow:0 2px 8px rgba(0,0,0,.5);
-  }
-
-  /* ---- actions ---- */
-
-  .actions{display:flex;gap:10px;flex-wrap:wrap}
-
-  button{
-    flex:1 1 auto;
-    min-height:50px;
-    padding:0 20px;
-    border-radius:13px;
-    border:1px solid var(--line);
-    background:var(--panel-strong);
-    color:var(--ink);
-    font-family:Archivo,sans-serif;
-    font-weight:600;
-    font-size:15.5px;
-    cursor:pointer;
-    display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
-    transition:transform .12s ease, filter .18s ease, background .18s ease;
-  }
-  button:hover{background:rgba(255,255,255,.11)}
-  button:active{transform:scale(.975)}
-
-  button.primary{
-    border:none;
-    color:#080910;
-    background:linear-gradient(120deg,var(--accent),var(--accent-2));
-    box-shadow:0 10px 26px -12px rgba(123,108,255,.9);
-  }
-  button.primary:hover{filter:brightness(1.07)}
-
-  button.ghost{flex:0 0 auto;background:transparent;color:var(--muted)}
-  button.ghost:hover{color:var(--ink);background:rgba(255,255,255,.06)}
-
-  button svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.1;fill:none;stroke-linecap:round;stroke-linejoin:round}
-
-  .hint{
-    text-align:center;
-    color:var(--muted);
-    font-size:12.5px;
-  }
-
-  [hidden]{display:none !important}
-
-  @media (prefers-reduced-motion:reduce){
-    *{transition:none !important}
-  }
-</style>
+<link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
 
@@ -259,11 +16,11 @@
 
   <header>
     <div class="logo">Easy<span>Meme</span></div>
-    <p class="tag">Photo in, caption on, share out.</p>
+    <p class="tag">Photo, GIF or clip in. Caption on. Share out.</p>
   </header>
 
   <section class="stage panel">
-    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Add a photo">
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Add a photo, GIF or video">
       <div class="drop-icon">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="3" y="5" width="18" height="14" rx="2.5"/>
@@ -272,13 +29,71 @@
           <path d="M14.5 15.5l1.8-1.8a2 2 0 0 1 2.8 0L21 16"/>
         </svg>
       </div>
-      <div class="drop-title">Add a photo</div>
+      <div class="drop-title">Add a photo, GIF or clip</div>
       <div class="drop-sub" id="dropSub">Tap to choose from your device</div>
     </div>
-    <canvas id="canvas" hidden></canvas>
+
+    <div class="canvas-wrap" id="canvasWrap" hidden>
+      <canvas id="canvas"></canvas>
+      <div class="sel-box" id="selBox" hidden></div>
+    </div>
+
+    <div class="busy" id="busy" hidden>
+      <div class="busy-bar"><i id="busyFill"></i></div>
+      <div class="busy-label" id="busyLabel">Working…</div>
+    </div>
   </section>
 
-  <section class="controls panel" id="controls" hidden>
+  <!-- Shown for video files: pick the window and the frame rate before the
+       clip is turned into frames, because both are baked in at that point. -->
+  <section class="controls panel" id="clipPanel" hidden>
+    <div class="field">
+      <label>Clip</label>
+      <div class="tl-meta" id="clipInfo"></div>
+    </div>
+    <div class="size-row" id="clipStartRow" hidden>
+      <label for="clipStart">Start</label>
+      <input type="range" id="clipStart" min="0" max="100" value="0" step="0.1">
+      <output id="clipStartOut">0.0 s</output>
+    </div>
+    <div class="size-row">
+      <label for="clipLen">Length</label>
+      <input type="range" id="clipLen" min="0.5" max="30" value="30" step="0.5">
+      <output id="clipLenOut">30.0 s</output>
+    </div>
+    <div class="size-row">
+      <label for="clipFps">Frames/s</label>
+      <input type="range" id="clipFps" min="5" max="20" value="12" step="1">
+      <output id="clipFpsOut">12</output>
+    </div>
+    <div class="actions">
+      <button class="primary" id="clipGo">Load frames</button>
+      <button class="ghost" id="clipCancel">Cancel</button>
+    </div>
+  </section>
+
+  <section class="timeline panel" id="timelinePanel" hidden>
+    <canvas id="timeline"></canvas>
+    <div class="tl-meta">
+      <button class="small" id="playBtn">Play</button>
+      <span id="tlPos">1 / 1</span>
+      <span class="grow"></span>
+      <span id="tlSize"></span>
+    </div>
+    <div class="size-row" style="margin-top:10px">
+      <label for="outWidth">Width</label>
+      <input type="range" id="outWidth" min="240" max="720" value="640" step="20">
+      <output id="outWidthOut">640 px</output>
+    </div>
+  </section>
+
+  <nav class="tabs" id="tabs" hidden>
+    <button data-tab="bars" class="on" type="button">Bars</button>
+    <button data-tab="layers" type="button">Layers</button>
+    <button data-tab="stickers" type="button">Stickers</button>
+  </nav>
+
+  <section class="controls panel" id="tab-bars" hidden>
     <div class="field">
       <label for="topText">Top bar</label>
       <textarea id="topText" rows="2" placeholder="Leave empty for no bar" autocomplete="off" autocorrect="off"></textarea>
@@ -293,6 +108,109 @@
     </div>
   </section>
 
+  <section class="controls panel" id="tab-layers" hidden>
+    <div class="row">
+      <button class="small" id="addTextBtn" type="button">+ Text layer</button>
+      <span class="grow"></span>
+    </div>
+
+    <ul class="layer-list" id="layerList"></ul>
+
+    <div class="sub" id="layerEditor" hidden>
+      <div class="field" id="textFields">
+        <label for="layerText">Text</label>
+        <textarea id="layerText" rows="2" placeholder="Type…" autocomplete="off" autocorrect="off"></textarea>
+      </div>
+
+      <div class="size-row" id="rowLayerSize">
+        <label for="layerSize">Size</label>
+        <input type="range" id="layerSize" min="25" max="180" value="70">
+        <output id="layerSizeOut">70</output>
+      </div>
+
+      <div class="row" id="rowTextStyle">
+        <label for="layerColor">Fill</label>
+        <input type="color" id="layerColor" value="#ffffff">
+        <label for="layerStroke">Outline</label>
+        <input type="color" id="layerStroke" value="#000000">
+        <span class="grow"></span>
+        <div class="seg" id="alignSeg">
+          <button data-align="left" type="button">L</button>
+          <button data-align="center" class="on" type="button">C</button>
+          <button data-align="right" type="button">R</button>
+        </div>
+      </div>
+
+      <div class="size-row" id="rowStickerScale" hidden>
+        <label for="layerScale">Scale</label>
+        <input type="range" id="layerScale" min="5" max="150" value="45">
+        <output id="layerScaleOut">45%</output>
+      </div>
+
+      <div class="size-row" id="rowStickerRot" hidden>
+        <label for="layerRot">Rotate</label>
+        <input type="range" id="layerRot" min="-180" max="180" value="0">
+        <output id="layerRotOut">0°</output>
+      </div>
+
+      <div class="row">
+        <button class="small" id="layerFlip" type="button" hidden>Flip</button>
+        <button class="small" id="layerBack" type="button">Send back</button>
+        <button class="small" id="layerFwd" type="button">Bring front</button>
+        <span class="grow"></span>
+        <button class="small ghost" id="layerDelete" type="button">Delete</button>
+      </div>
+
+      <p class="busy-label" id="rangeHint" hidden>
+        Drag the purple bar under the filmstrip to set when this layer appears.
+      </p>
+    </div>
+  </section>
+
+  <section class="controls panel" id="tab-stickers" hidden>
+    <div class="row">
+      <button class="small primary" id="cutBtn" type="button">Cut sticker from a photo</button>
+      <span class="grow"></span>
+      <button class="small ghost" id="refreshStickers" type="button" title="Reload the library">Refresh</button>
+    </div>
+    <p class="busy-label" id="stickerNote">Tap a sticker to drop it on the canvas.</p>
+    <div class="sticker-grid" id="stickerGrid"></div>
+  </section>
+
+  <!-- Cutout editor. Replaces the panels above while it is open. -->
+  <section class="controls panel" id="cutoutPanel" hidden>
+    <div class="cutout-wrap">
+      <canvas id="cutoutCanvas"></canvas>
+    </div>
+
+    <div class="tl-meta" id="cutoutStatus">Loading the model…</div>
+
+    <div class="row">
+      <div class="seg" id="brushSeg">
+        <button data-brush="none" class="on" type="button">Pan</button>
+        <button data-brush="add" type="button">Restore</button>
+        <button data-brush="erase" type="button">Erase</button>
+      </div>
+    </div>
+
+    <div class="size-row">
+      <label for="brushSize">Brush</label>
+      <input type="range" id="brushSize" min="6" max="120" value="34">
+      <output id="brushSizeOut">34</output>
+    </div>
+
+    <div class="size-row">
+      <label for="matteEdge">Edge</label>
+      <input type="range" id="matteEdge" min="0" max="100" value="50">
+      <output id="matteEdgeOut">50</output>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="cutSave" type="button" disabled>Save to library</button>
+      <button class="ghost" id="cutCancel" type="button">Cancel</button>
+    </div>
+  </section>
+
   <div class="actions" id="actions" hidden>
     <button class="primary" id="shareBtn" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
@@ -302,281 +220,17 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M4 20h16"/></svg>
       Download
     </button>
-    <button class="ghost" id="newBtn" title="Pick another photo">New photo</button>
+    <button class="ghost" id="newBtn" title="Pick another file">New file</button>
   </div>
 
   <p class="hint" id="hint" hidden>Nothing is uploaded &mdash; the meme is built on your device.</p>
 
 </div>
 
-<input type="file" id="file" accept="image/*" hidden>
+<input type="file" id="file" accept="image/*,video/mp4,video/quicktime,video/webm" hidden>
+<input type="file" id="cutFile" accept="image/*" hidden>
 
-<script>
-(() => {
-  "use strict";
-
-  const MAX_W = 1600;      // cap export width; phone photos are needlessly huge
-  const MAX_H = 4096;      // and height: browsers (iOS Safari worst) refuse to
-                           // allocate a canvas past a few thousand px a side,
-                           // so a tall panorama would silently come out blank
-  const JPEG_Q = 0.92;
-
-  const el = {
-    drop: document.getElementById("drop"),
-    dropSub: document.getElementById("dropSub"),
-    canvas: document.getElementById("canvas"),
-    controls: document.getElementById("controls"),
-    actions: document.getElementById("actions"),
-    hint: document.getElementById("hint"),
-    top: document.getElementById("topText"),
-    bot: document.getElementById("botText"),
-    size: document.getElementById("size"),
-    file: document.getElementById("file"),
-    shareBtn: document.getElementById("shareBtn"),
-    dlBtn: document.getElementById("dlBtn"),
-    newBtn: document.getElementById("newBtn"),
-  };
-
-  const ctx = el.canvas.getContext("2d");
-  const measure = document.createElement("canvas").getContext("2d");
-
-  let source = null;   // ImageBitmap or HTMLImageElement
-
-  const HINT_TEXT = el.hint.textContent;
-  let hintTimer = 0;
-
-  // The drop panel is gone once a photo is loaded, so a bad file dropped later
-  // has to report itself somewhere that is still on screen.
-  function notify(msg) {
-    if (!el.drop.hidden) { el.dropSub.textContent = msg; return; }
-    clearTimeout(hintTimer);
-    el.hint.textContent = msg;
-    hintTimer = setTimeout(() => { el.hint.textContent = HINT_TEXT; }, 4000);
-  }
-
-  const fontAt = (px) => '600 ' + px + 'px Archivo, "Helvetica Neue", Arial, sans-serif';
-
-  /* ---------- loading ---------- */
-
-  async function decode(file) {
-    // createImageBitmap honours EXIF orientation, which matters for iPhone shots.
-    if (window.createImageBitmap) {
-      try {
-        return await createImageBitmap(file, { imageOrientation: "from-image" });
-      } catch (_) { /* older Safari falls through to the <img> path */ }
-    }
-    return await new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("decode failed")); };
-      img.src = url;
-    });
-  }
-
-  async function load(file) {
-    if (!file) return;
-    // Some drag sources hand over an empty MIME type, so only reject a type we
-    // positively know is wrong and let decode() judge the rest.
-    if (file.type && !file.type.startsWith("image/")) {
-      notify("That is not an image file.");
-      return;
-    }
-    let next;
-    try {
-      next = await decode(file);
-    } catch (_) {
-      notify("That file could not be opened. Try another.");
-      return;
-    }
-    if (source && source.close) source.close();
-    source = next;
-
-    el.drop.hidden = true;
-    el.canvas.hidden = false;
-    el.controls.hidden = false;
-    el.actions.hidden = false;
-    el.hint.hidden = false;
-    clearTimeout(hintTimer);
-    el.hint.textContent = HINT_TEXT;
-    render();
-  }
-
-  /* ---------- rendering ---------- */
-
-  // A word too wide for a line of its own is split by character, otherwise it
-  // would bleed off both edges of the canvas. Iterating a string yields whole
-  // code points, so surrogate pairs survive the split.
-  function chop(word, maxWidth) {
-    const parts = [];
-    let chunk = "";
-    for (const ch of word) {
-      const test = chunk + ch;
-      if (chunk && measure.measureText(test).width > maxWidth) { parts.push(chunk); chunk = ch; }
-      else chunk = test;
-    }
-    if (chunk) parts.push(chunk);
-    return parts;
-  }
-
-  function wrap(text, maxWidth) {
-    const out = [];
-    for (const para of text.split("\n")) {
-      const words = para.split(/\s+/).filter(Boolean);
-      if (!words.length) continue;
-      let line = "";
-      for (const word of words) {
-        if (measure.measureText(word).width > maxWidth) {
-          if (line) { out.push(line); line = ""; }
-          const parts = chop(word, maxWidth);
-          for (let i = 0; i < parts.length - 1; i++) out.push(parts[i]);
-          line = parts[parts.length - 1] || "";
-          continue;
-        }
-        const test = line ? line + " " + word : word;
-        if (!line || measure.measureText(test).width <= maxWidth) line = test;
-        else { out.push(line); line = word; }
-      }
-      if (line) out.push(line);
-    }
-    return out;
-  }
-
-  function render() {
-    if (!source) return;
-
-    const scale = Math.min(1, MAX_W / source.width, MAX_H / source.height);
-    const w = Math.max(1, Math.round(source.width * scale));
-    const h = Math.max(1, Math.round(source.height * scale));
-
-    const fs = Math.round(w * (Number(el.size.value) / 1000));
-    const lh = Math.round(fs * 1.26);
-    const padX = Math.round(w * 0.045);
-    const padY = Math.round(fs * 0.62);
-
-    measure.font = fontAt(fs);
-    const inner = w - padX * 2;
-    const topLines = wrap(el.top.value, inner);
-    const botLines = wrap(el.bot.value, inner);
-
-    const topH = topLines.length ? topLines.length * lh + padY * 2 : 0;
-    const botH = botLines.length ? botLines.length * lh + padY * 2 : 0;
-
-    el.canvas.width = w;
-    el.canvas.height = topH + h + botH;
-
-    // Resizing a canvas resets its context, so every style is set afterwards.
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, w, el.canvas.height);
-    ctx.drawImage(source, 0, topH, w, h);
-
-    ctx.fillStyle = "#000000";
-    ctx.font = fontAt(fs);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    topLines.forEach((line, i) => ctx.fillText(line, w / 2, padY + lh * i + lh / 2));
-    botLines.forEach((line, i) => ctx.fillText(line, w / 2, topH + h + padY + lh * i + lh / 2));
-  }
-
-  /* ---------- export ---------- */
-
-  function stamp() {
-    const d = new Date(), p = (n) => String(n).padStart(2, "0");
-    return "" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate())
-      + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
-  }
-
-  const toBlob = () => new Promise((resolve) => el.canvas.toBlob(resolve, "image/jpeg", JPEG_Q));
-
-  async function download() {
-    const blob = await toBlob();
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "easymeme-" + stamp() + ".jpg";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-  }
-
-  async function share() {
-    const blob = await toBlob();
-    if (!blob) return;
-    const file = new File([blob], "easymeme-" + stamp() + ".jpg", { type: "image/jpeg" });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file] });
-      } catch (err) {
-        if (err && err.name === "AbortError") return;   // user dismissed the sheet
-        download();
-      }
-    } else {
-      download();
-    }
-  }
-
-  // canShare is the only reliable signal for file sharing support, so probe it
-  // with a throwaway file before offering the button.
-  if (navigator.canShare && window.File) {
-    try {
-      const probe = new File([new Blob([""], { type: "image/jpeg" })], "p.jpg", { type: "image/jpeg" });
-      if (navigator.canShare({ files: [probe] })) el.shareBtn.hidden = false;
-    } catch (_) { /* leave Share hidden */ }
-  }
-
-  /* ---------- events ---------- */
-
-  const pick = () => el.file.click();
-
-  el.drop.addEventListener("click", pick);
-  el.drop.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
-  });
-  el.newBtn.addEventListener("click", pick);
-
-  el.file.addEventListener("change", () => {
-    load(el.file.files && el.file.files[0]);
-    el.file.value = "";   // re-picking the same file must still fire change
-  });
-
-  el.top.addEventListener("input", render);
-  el.bot.addEventListener("input", render);
-  el.size.addEventListener("input", render);
-
-  el.dlBtn.addEventListener("click", download);
-  el.shareBtn.addEventListener("click", share);
-
-  ["dragenter", "dragover"].forEach((t) =>
-    el.drop.addEventListener(t, (e) => { e.preventDefault(); el.drop.classList.add("over"); }));
-  ["dragleave", "drop"].forEach((t) =>
-    el.drop.addEventListener(t, () => el.drop.classList.remove("over")));
-
-  document.addEventListener("dragover", (e) => e.preventDefault());
-  document.addEventListener("drop", (e) => {
-    e.preventDefault();
-    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) load(f);
-  });
-
-  document.addEventListener("paste", (e) => {
-    const files = e.clipboardData && e.clipboardData.files;
-    if (files && files.length) load(files[0]);
-  });
-
-  // Text is measured in Archivo, so re-render once the webfont lands or the
-  // bars stay sized for the fallback face.
-  if (document.fonts && document.fonts.load) {
-    document.fonts.load('600 40px Archivo').then(render).catch(() => {});
-  }
-
-  if (matchMedia("(pointer:fine)").matches) {
-    el.dropSub.textContent = "Click to choose · or drop / paste an image";
-  }
-})();
-</script>
+<script type="module" src="/js/main.js"></script>
 
 </body>
 </html>
