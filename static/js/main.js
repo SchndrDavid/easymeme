@@ -22,6 +22,7 @@ import { initStickers } from "./stickers.js";
 
 const JPEG_Q = 0.92;
 const LONG_PRESS_MS = 550;
+const PHOTO_LAYER_MAX = 1200;   // longest side of a photo overlay; the canvas tops out at 1600
 
 const $ = (id) => document.getElementById(id);
 
@@ -45,7 +46,7 @@ const el = {
 
   top: $("topText"), bot: $("botText"), size: $("size"),
 
-  addTextBtn: $("addTextBtn"), layerList: $("layerList"), layerEditor: $("layerEditor"),
+  addTextBtn: $("addTextBtn"), addPhotoBtn: $("addPhotoBtn"), layerList: $("layerList"), layerEditor: $("layerEditor"),
   textFields: $("textFields"), layerText: $("layerText"),
   rowLayerSize: $("rowLayerSize"), layerSize: $("layerSize"), layerSizeOut: $("layerSizeOut"),
   rowTextStyle: $("rowTextStyle"), layerColor: $("layerColor"), layerStroke: $("layerStroke"),
@@ -60,7 +61,7 @@ const el = {
 
   actions: $("actions"), shareBtn: $("shareBtn"), dlBtn: $("dlBtn"), newBtn: $("newBtn"),
   hint: $("hint"),
-  file: $("file"), cutFile: $("cutFile"),
+  file: $("file"), cutFile: $("cutFile"), photoFile: $("photoFile"),
 };
 
 const ctx = el.canvas.getContext("2d");
@@ -416,7 +417,7 @@ const ICON_EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6.5 10-6.5S22 12 2
 const ICON_EYE_OFF = '<svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.3 3.9M6.3 8.2A16.7 16.7 0 0 0 2 12s3.5 6 10 6c1.2 0 2.3-.2 3.3-.5"/></svg>';
 
 function layerName(layer) {
-  if (layer.type === "sticker") return "Sticker";
+  if (layer.type === "sticker") return layer.kind === "photo" ? "Photo" : "Sticker";
   return layer.text ? layer.text.replace(/\s+/g, " ").slice(0, 40) : "Empty text";
 }
 
@@ -515,6 +516,47 @@ el.addTextBtn.addEventListener("click", () => {
   if (isAnimated(doc)) timeline.draw();
   el.layerText.focus();
   el.layerText.select();
+});
+
+/**
+ * Decodes a photo for use as an overlay. A phone shot is far bigger than it
+ * will ever be drawn, and on a GIF it is painted once per frame, so it is
+ * shrunk to a sane size up front.
+ */
+async function decodeOverlay(file) {
+  const src = await decodeStill(file);
+  const sw = src.width, sh = src.height;
+  const k = Math.min(1, PHOTO_LAYER_MAX / Math.max(sw, sh));
+  if (k === 1 && typeof ImageBitmap !== "undefined" && src instanceof ImageBitmap) return src;
+
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(sw * k));
+  c.height = Math.max(1, Math.round(sh * k));
+  const g = c.getContext("2d");
+  g.imageSmoothingQuality = "high";
+  g.drawImage(src, 0, 0, c.width, c.height);
+  if (src.close) src.close();
+  return window.createImageBitmap ? await createImageBitmap(c) : c;
+}
+
+el.addPhotoBtn.addEventListener("click", () => {
+  if (!doc) return;
+  el.photoFile.click();
+});
+el.photoFile.addEventListener("change", async () => {
+  const f = el.photoFile.files && el.photoFile.files[0];
+  el.photoFile.value = "";
+  if (!f || !doc) return;
+  try {
+    const bitmap = await decodeOverlay(f);
+    addStickerLayer(doc, { src: null, bitmap, kind: "photo", scale: 0.5 });
+    showTab("layers");
+    renderLayerList();
+    paint();
+    if (isAnimated(doc)) timeline.draw();
+  } catch (_) {
+    notify("That photo could not be opened.");
+  }
 });
 
 el.layerText.addEventListener("input", () => {

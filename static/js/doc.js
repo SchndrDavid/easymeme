@@ -77,15 +77,16 @@ export function addTextLayer(doc, { text = "" } = {}) {
   return layer;
 }
 
-export function addStickerLayer(doc, { src, bitmap }) {
+export function addStickerLayer(doc, { src, bitmap, kind = "sticker", scale = 0.45 }) {
   const layer = {
     id: newId(),
-    type: "sticker",
+    type: "sticker",            // photos share the sticker path: a bitmap that moves
+    kind,                       // "sticker" | "photo", only used to name the layer
     src,                        // URL under /stickers/, kept so it can be re-fetched
     bitmap,
     x: 0.5,
     y: 0.5,
-    scale: 0.45,                // width as a fraction of the image width
+    scale,                      // width as a fraction of the image width
     rotation: 0,
     flipX: false,
     from: doc.trim.from,
